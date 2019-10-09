@@ -1,0 +1,31 @@
+﻿<Page
+    x:Class="RssReader.SettingsPage"
+    xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+    xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+    xmlns:local="using:RssReader"
+    xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+    xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+    mc:Ignorable="d"
+    Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
+
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
+        </Grid.RowDefinitions>
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="1*"></ColumnDefinition>
+            <ColumnDefinition Width="3*"></ColumnDefinition>
+            <ColumnDefinition Width="8*"></ColumnDefinition>
+        </Grid.ColumnDefinitions>
+
+        <TextBlock Margin="2,4,2,4" Grid.Row="0" Grid.Column="0" FontSize="18" Text="AppId:" TextAlignment="Center"></TextBlock>
+        <TextBox Margin="2,4,2,4" Name="AppId" Grid.Row="0" Grid.Column="1" FontSize="18"></TextBox>
+
+        <TextBlock Margin="2,4,2,4" Grid.Row="1" Grid.Column="0" FontSize="18" Text="BaseUrl:" TextAlignment="Center"></TextBlock>
+        <TextBox Margin="2,4,2,4" Name="BaseUrl" Grid.Row="1" Grid.Column="1" FontSize="18"></TextBox>
+
+        <Button Margin="2,4,2,4" Name="SaveButton" Grid.Row="2" Grid.Column="1" FontSize="18" HorizontalAlignment="Stretch" Click="SaveButton_Click">Save</Button>
+    </Grid>
+</Page>
