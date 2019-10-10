@@ -33,16 +33,23 @@ namespace RssReader
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
-            using(var context = new AppDbContext())
+            try
             {
-                context.App.Remove(Helper.App);
-                context.SaveChanges();
-                Helper.App.Id = this.AppId.Text;
-                Helper.App.BaseUrl = this.BaseUrl.Text;
-                context.App.Add(Helper.App);
-                context.SaveChanges();
-                Helper.ReInit();
-                Helper.ShowMessageDialog("Message", "Save ok.");
+                using(var context = new AppDbContext())
+                {
+                    context.App.Remove(Helper.App);
+                    context.SaveChanges();
+                    Helper.App.Id = this.AppId.Text;
+                    Helper.App.BaseUrl = this.BaseUrl.Text;
+                    context.App.Add(Helper.App);
+                    context.SaveChanges();
+                    Helper.ReInit();
+                    Helper.ShowMessageDialog("Message", "Save ok.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
             }
         }
     }

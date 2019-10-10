@@ -37,47 +37,68 @@ namespace RssReader
 
         private void NavView_Loaded(object sender, RoutedEventArgs e)
         {
-            this.NavView.SelectedItem = this.NavView.MenuItems[0];
-            this.NavView_Navigate("home", new EntranceNavigationTransitionInfo());
-            this.RefreshFeeds();
+            try
+            {
+                this.NavView.SelectedItem = this.NavView.MenuItems[0];
+                this.NavView_Navigate("home", new EntranceNavigationTransitionInfo());
+                this.RefreshFeeds();
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
+            }
         }
 
         private void NavView_ItemInvoked(NavigationView sender, NavigationViewItemInvokedEventArgs args)
         {
-            if (args.IsSettingsInvoked)
+            try
             {
-                this.ContentFrame.Navigate(typeof(SettingsPage), args.RecommendedNavigationTransitionInfo);
-                return;
-            }
+                if (args.IsSettingsInvoked)
+                {
+                    this.ContentFrame.Navigate(typeof(SettingsPage), args.RecommendedNavigationTransitionInfo);
+                    return;
+                }
 
-            if (args.InvokedItemContainer != null)
+                if (args.InvokedItemContainer != null)
+                {
+                    var navItemTag = args.InvokedItemContainer.Tag.ToString();
+                    NavView_Navigate(navItemTag, args.RecommendedNavigationTransitionInfo);
+                }
+            }
+            catch (Exception ex)
             {
-                var navItemTag = args.InvokedItemContainer.Tag.ToString();
-                NavView_Navigate(navItemTag, args.RecommendedNavigationTransitionInfo);
+                Helper.LogException(ex);
             }
         }
 
         private void NavView_Navigate(string navItemTag, NavigationTransitionInfo transitionInfo, object param = null)
         {
-            if (navItemTag == "refreshfeeds")
+            try
             {
-                this.RefreshFeeds();
-                return;
-            }
+                if (navItemTag == "refreshfeeds")
+                {
+                    this.RefreshFeeds();
+                    return;
+                }
 
-            Type page = null;
-            if (_pages.ContainsKey(navItemTag))
-            {
-                page = _pages[navItemTag];
-            }
+                Type page = null;
+                if (_pages.ContainsKey(navItemTag))
+                {
+                    page = _pages[navItemTag];
+                }
 
-            if (!(page is null))
-            {
-                this.ContentFrame.Navigate(page, param, transitionInfo);
+                if (!(page is null))
+                {
+                    this.ContentFrame.Navigate(page, param, transitionInfo);
+                }
+                else
+                {
+                    this.ContentFrame.Navigate(typeof(ArticleListPage), navItemTag, transitionInfo);
+                }
             }
-            else
+            catch (Exception ex)
             {
-                this.ContentFrame.Navigate(typeof(ArticleListPage), navItemTag, transitionInfo);
+                Helper.LogException(ex);
             }
         }
 

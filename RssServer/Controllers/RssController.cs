@@ -164,11 +164,21 @@ namespace RssServer.Controllers
                         {
                             feeds.AsParallel().ForAll(feed =>
                             {
-                                using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+                                try
                                 {
-                                    var sf = SyndicationFeed.Load(XmlReader.Create(feed.Url));
-                                    this.ParseArticles(sf, feed.Url.Md5(), connection);
-                                    _counter.Decrement();
+                                    using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+                                    {
+                                        var sf = SyndicationFeed.Load(XmlReader.Create(feed.Url));
+                                        this.ParseArticles(sf, feed.Url.Md5(), connection);
+                                    }
+                                }
+                                catch (Exception e)
+                                {
+                                    this.logger.LogError(e, $"error occured when refreshing {feed}");
+                                }
+                                finally
+                                {
+                                        _counter.Decrement();
                                 }
                             });
                         });

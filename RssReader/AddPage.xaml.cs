@@ -38,19 +38,21 @@ namespace RssReader
 
         private void AddButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(this.RssUriText.Text))
+            try
             {
-                return;
-            }
+                if (string.IsNullOrWhiteSpace(this.RssUriText.Text))
+                {
+                    return;
+                }
 
-            var rssModel = Helper.Request<RssModel>("/rss/add?feed=" + HttpUtility.UrlEncode(this.RssUriText.Text), "POST");
-            if (rssModel == null)
-            {
-                return;
-            }
+                var rssModel = Helper.Request<RssModel>("/rss/add?feed=" + HttpUtility.UrlEncode(this.RssUriText.Text), "POST");
+                if (rssModel == null)
+                {
+                    return;
+                }
 
-            this.RssModel.Title = rssModel.Title;
-            this.RssModel.Articles = rssModel.Articles.AsParallel().AsOrdered().Select(article =>
+                this.RssModel.Title = rssModel.Title;
+                this.RssModel.Articles = rssModel.Articles.AsParallel().AsOrdered().Select(article =>
             {
                 var articleViewModel = new ArticleViewModel
                 {
@@ -76,6 +78,11 @@ namespace RssReader
                 }
                 return articleViewModel;
             }).ToList();
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
+            }
         }
 
         private void ArticleListView_ItemClick(object sender, ItemClickEventArgs e)

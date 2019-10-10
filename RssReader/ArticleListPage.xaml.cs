@@ -45,74 +45,77 @@ namespace RssReader
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
         {
-            base.OnNavigatedTo(e);
+            try
+            {
+                base.OnNavigatedTo(e);
 
-            this.feedId = e.Parameter.ToString();
-            var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={e.Parameter}&page=0&pageCount=30", "GET");
-            this.RssModel.Articles = this.GetUnreadArticles(articles);
+                this.feedId = e.Parameter?.ToString();
+                var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={e.Parameter}&page=0&pageCount=30", "GET");
+                this.RssModel.Articles = this.GetUnreadArticles(articles);
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
+            }
         }
 
         private void ArticleListView_ItemClick(object sender, ItemClickEventArgs e)
         {
-            if (e.ClickedItem is ArticleViewModel article)
+            try
             {
-                article.Icon = new SymbolIcon((Symbol)0xE73E);
-                using (var context = new RssDbContext())
+                if (e.ClickedItem is ArticleViewModel article)
                 {
-                    Helper.EnsureTableExist(context, context.ReadRecords);
-                    context.ReadRecords.Add(new ReadRecord
-                    {
-                        Url = article.Url,
-                        Time = DateTime.Now
-                    });
-                    context.SaveChanges();
+                    article.Icon = new SymbolIcon((Symbol)0xE73E);
+                    Helper.MarkRead(article.Url);
+                    Windows.System.Launcher.LaunchUriAsync(new Uri(article.Url));
                 }
-                Windows.System.Launcher.LaunchUriAsync(new Uri(article.Url));
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
             }
         }
 
         private void ReadAndLoadButton_Click(object sender, RoutedEventArgs e)
         {
-            this.RssModel.Articles.ForEach(a => a.Icon = new SymbolIcon((Symbol)0xE73E));
+            try
+            {
+                this.RssModel.Articles?.ForEach(a => a.Icon = new SymbolIcon((Symbol)0xE73E));
 
-            using(var context = new RssDbContext())
-            {
-                Helper.EnsureTableExist(context, context.ReadRecords);
-            }
-            this.RssModel.Articles.AsParallel().ForAll(article =>
-            {
-                using (var context = new RssDbContext())
+                this.RssModel.Articles?.AsParallel().ForAll(article => Helper.MarkRead(article.Url));
+
+                var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}", "GET");
+                if (articles == null || !articles.Any())
                 {
-                    context.ReadRecords.Add(new ReadRecord
-                    {
-                        Url = article.Url,
-                        Time = DateTime.Now
-                    });
+                    Helper.ShowMessageDialog("Message", "No more articles.");
+                    return;
                 }
-            });
 
-            var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}", "GET");
-            if (articles == null || !articles.Any())
-            {
-                Helper.ShowMessageDialog("Message", "No more articles.");
-                return;
+                this.RssModel.Articles = this.CombineArticleList(this.RssModel.Articles, this.GetUnreadArticles(articles));
             }
-
-            this.CombineArticleList(this.RssModel.Articles, this.GetUnreadArticles(articles));
-            this.RssModel.OnPropertyChanged("Articles");
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
+            }
         }
 
         private void LoadButton_Click(object sender, RoutedEventArgs e)
         {
-            var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}", "GET");
-            if (articles == null || !articles.Any())
+            try
             {
-                Helper.ShowMessageDialog("Message", "No more articles.");
-                return;
-            }
+                var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}", "GET");
+                if (articles == null || !articles.Any())
+                {
+                    Helper.ShowMessageDialog("Message", "No more articles.");
+                    return;
+                }
 
-            this.CombineArticleList(this.RssModel.Articles, this.GetUnreadArticles(articles));
-            this.RssModel.OnPropertyChanged("Articles");
+                this.RssModel.Articles = this.CombineArticleList(this.RssModel.Articles, this.GetUnreadArticles(articles));
+            }
+            catch (Exception ex)
+            {
+                Helper.LogException(ex);
+            }
         }
 
         private void PullButton_Click(object sender, RoutedEventArgs e)
@@ -120,16 +123,11 @@ namespace RssReader
             this.Frame.Navigate(typeof(ArticleListPage), this.feedId);
         }
 
-        private ArticleViewModel ConvertArticle(Article article)
+        private ArticleViewModel ConvertArticle(Article article, bool readed = false)
         {
             if (article == null)
             {
                 return null;
-            }
-
-            if (article.Published < this.endTime)
-            {
-                this.endTime = article.Published;
             }
 
             var articleViewModel = new ArticleViewModel
@@ -144,7 +142,8 @@ namespace RssReader
                 Published = article.Published.ToString("yyyy-MM-dd HH:mm:ss"),
                 Title = article.Title,
                 Updated = article.Updated.ToString("yyyy-MM-dd HH:mm:ss"),
-                Url = article.Url
+                Url = article.Url,
+                Icon = readed ? new SymbolIcon((Symbol)0xE73E) : null
             };
             if (!string.IsNullOrWhiteSpace(article.Summary))
             {
@@ -157,22 +156,34 @@ namespace RssReader
             return articleViewModel;
         }
 
-        private void CombineArticleList(List<ArticleViewModel> list, List<ArticleViewModel> additional)
+        private List<ArticleViewModel> CombineArticleList(List<ArticleViewModel> list, List<ArticleViewModel> additional)
         {
+            List<ArticleViewModel> newList = new List<ArticleViewModel>();
+            if (list != null)
+            {
+                newList.AddRange(list);
+            }
+
             if (additional == null || !additional.Any())
             {
-                return;
+                return newList;
             }
 
             foreach(var article in additional)
             {
-                if (!list.Any(a => a.Url == article.Url))
+                if (!newList.Any(a => a.Url == article.Url))
                 {
-                    list.Add(article);
+                    newList.Add(article);
                 }
             }
+            return newList;
         }
 
+        /// <summary>
+        /// 获取未读文章，若所有文章都已读，则返回所有已读文章
+        /// </summary>
+        /// <param name="articles"></param>
+        /// <returns></returns>
         private List<ArticleViewModel> GetUnreadArticles(List<Article> articles)
         {
             if (articles == null || !articles.Any())
@@ -184,16 +195,28 @@ namespace RssReader
             {
                 Helper.EnsureTableExist(context, context.ReadRecords);
             }
-            return articles.AsParallel()
+            var unreadArticles = articles.AsParallel()
                 .AsOrdered()
                 .Where(article =>
                 {
+                    if (article.Published < this.endTime)
+                    {
+                        this.endTime = article.Published;
+                    }
+
                     using (var context = new RssDbContext())
                     {
                         return context.ReadRecords.FirstOrDefault(record => record.Url == article.Url) == null;
                     }
-                })
-                .Select(article => this.ConvertArticle(article)).ToList();
+                });
+            if (unreadArticles.Any())
+            {
+                return unreadArticles.Select(article => this.ConvertArticle(article)).ToList();
+            }
+            else
+            {
+                return articles.Select(article => this.ConvertArticle(article, true)).ToList();
+            }
         }
     }
 }
