@@ -32,7 +32,7 @@ namespace RssReader
     {
         private static readonly Regex _ignoreTagRegex = new Regex("<[^>]*>");
 
-        private DateTime endTime = DateTime.Now;
+        private DateTime endTime;
 
         private string feedId = null;
 
@@ -49,9 +49,24 @@ namespace RssReader
             {
                 base.OnNavigatedTo(e);
 
-                this.feedId = e.Parameter?.ToString();
-                var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={e.Parameter}&page=0&pageCount=30", "GET");
-                this.RssModel.Articles = this.GetUnreadArticles(articles);
+                if (e.Parameter != null && e.Parameter is ArticleListPageParams parameters)
+                {
+                    this.feedId = parameters.FeedId;
+                    this.endTime = parameters.EndTime;
+                    var url = $"/rss/articles?feedId={this.feedId}&page=0&pageCount=30";
+                    if (this.endTime != default)
+                    {
+                        url = $"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}";
+                    }
+                    var articles = Helper.Request<List<Article>>(url, "GET");
+                    if (articles == null || !articles.Any())
+                    {
+                        Helper.ShowMessageDialog("Message", "No more articles.");
+                        return;
+                    }
+
+                    this.RssModel.Articles = this.GetUnreadArticles(articles);
+                }
             }
             catch (Exception ex)
             {
@@ -65,7 +80,10 @@ namespace RssReader
             {
                 if (e.ClickedItem is ArticleViewModel article)
                 {
-                    article.Icon = new SymbolIcon((Symbol)0xE73E);
+                    if (article.Icon == null)
+                    {
+                        article.Icon = new SymbolIcon((Symbol)0xE73E);
+                    }
                     Helper.MarkRead(article.Url);
                     Windows.System.Launcher.LaunchUriAsync(new Uri(article.Url));
                 }
@@ -80,18 +98,13 @@ namespace RssReader
         {
             try
             {
-                this.RssModel.Articles?.ForEach(a => a.Icon = new SymbolIcon((Symbol)0xE73E));
-
                 this.RssModel.Articles?.AsParallel().ForAll(article => Helper.MarkRead(article.Url));
 
-                var articles = Helper.Request<List<Article>>($"/rss/articles?feedId={this.feedId}&page=0&pageCount=30&endTime={this.endTime}", "GET");
-                if (articles == null || !articles.Any())
+                this.Frame.Navigate(typeof(ArticleListPage), new ArticleListPageParams
                 {
-                    Helper.ShowMessageDialog("Message", "No more articles.");
-                    return;
-                }
-
-                this.RssModel.Articles = this.CombineArticleList(this.RssModel.Articles, this.GetUnreadArticles(articles));
+                    FeedId = this.feedId,
+                    EndTime = this.endTime
+                });
             }
             catch (Exception ex)
             {
@@ -120,7 +133,11 @@ namespace RssReader
 
         private void PullButton_Click(object sender, RoutedEventArgs e)
         {
-            this.Frame.Navigate(typeof(ArticleListPage), this.feedId);
+            this.Frame.Navigate(typeof(ArticleListPage), new ArticleListPageParams
+            {
+                FeedId = this.feedId,
+                EndTime = this.endTime
+            });
         }
 
         private ArticleViewModel ConvertArticle(Article article, bool readed = false)
@@ -195,11 +212,11 @@ namespace RssReader
             {
                 Helper.EnsureTableExist(context, context.ReadRecords);
             }
-            var unreadArticles = articles.AsParallel()
+            var unreadArticles = articles.OrderByDescending(a => a.Published).AsParallel()
                 .AsOrdered()
                 .Where(article =>
                 {
-                    if (article.Published < this.endTime)
+                    if (this.endTime == default || article.Published < this.endTime)
                     {
                         this.endTime = article.Published;
                     }

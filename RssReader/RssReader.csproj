@@ -145,6 +145,7 @@
       <DependentUpon>MainPage.xaml</DependentUpon>
     </Compile>
     <Compile Include="Models\App.cs" />
+    <Compile Include="Models\ArticleListPageParams.cs" />
     <Compile Include="Models\Rss.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="SettingsPage.xaml.cs">

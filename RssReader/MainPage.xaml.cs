@@ -1,4 +1,5 @@
 ﻿using Rss.Common.Entities;
+using RssReader.Models;
 using System;
 using System.Collections.Generic;
 using System.IO;
@@ -93,7 +94,10 @@ namespace RssReader
                 }
                 else
                 {
-                    this.ContentFrame.Navigate(typeof(ArticleListPage), navItemTag, transitionInfo);
+                    this.ContentFrame.Navigate(typeof(ArticleListPage), new ArticleListPageParams
+                    {
+                        FeedId = navItemTag
+                    }, transitionInfo);
                 }
             }
             catch (Exception ex)
