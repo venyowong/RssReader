@@ -135,8 +135,7 @@ namespace RssReader
         {
             this.Frame.Navigate(typeof(ArticleListPage), new ArticleListPageParams
             {
-                FeedId = this.feedId,
-                EndTime = this.endTime
+                FeedId = this.feedId
             });
         }
 

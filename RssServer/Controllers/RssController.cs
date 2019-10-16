@@ -20,14 +20,15 @@ namespace RssServer.Controllers
     {
         private AppSettings appSettings;
 
-        private static readonly Counter _counter = new Counter();
-
         private ILogger<RssController> logger;
-        
-        public RssController(IOptions<AppSettings> options, ILogger<RssController> logger)
+
+        private RssRefresher refresher;
+
+        public RssController(IOptions<AppSettings> options, ILogger<RssController> logger, RssRefresher refresher)
         {
             this.appSettings = options?.Value;
             this.logger = logger;
+            this.refresher = refresher;
         }
 
         [HttpPost, Route("add")]
@@ -85,7 +86,7 @@ namespace RssServer.Controllers
                     }
                     #endregion
 
-                    result.Articles = this.ParseArticles(sf, feedId, connection);
+                    result.Articles = Helper.ParseArticles(sf, feedId, connection);
                 }
 
                 return result;
@@ -152,117 +153,19 @@ namespace RssServer.Controllers
         [HttpGet, Route("refresh")]
         public object Refresh()
         {
-            if (_counter.Get() <= 0)
+            using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
             {
-                using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+                var feeds = connection.Query<Feed>("SELECT * FROM feed");
+                if (feeds != null && feeds.Any())
                 {
-                    var feeds = connection.Query<Feed>("SELECT * FROM feed");
-                    if (feeds != null && feeds.Any())
+                    foreach(var feed in feeds)
                     {
-                        _counter.Reset(feeds.Count());
-                        Task.Run(() =>
-                        {
-                            feeds.AsParallel().ForAll(feed =>
-                            {
-                                try
-                                {
-                                    using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
-                                    {
-                                        var sf = SyndicationFeed.Load(XmlReader.Create(feed.Url));
-                                        this.ParseArticles(sf, feed.Url.Md5(), connection);
-                                    }
-                                }
-                                catch (Exception e)
-                                {
-                                    this.logger.LogError(e, $"error occured when refreshing {feed}");
-                                }
-                                finally
-                                {
-                                        _counter.Decrement();
-                                }
-                            });
-                        });
+                        this.refresher.PushFeed(feed.Url);
                     }
                 }
-
-                return true;
-            }
-            else
-            {
-                return false;
-            }
-        }
-
-        private string Simplify(string input, int length = 500)
-        {
-            if (string.IsNullOrWhiteSpace(input))
-            {
-                return string.Empty;
             }
 
-            if (input.Length <= length)
-            {
-                return input;
-            }
-
-            return input.Substring(0, length - 3) + "...";
-        }
-
-        private List<Article> ParseArticles(SyndicationFeed sf, string feedId, IDbConnection connection)
-        {
-            if (sf == null || sf.Items == null || !sf.Items.Any())
-            {
-                this.logger.LogWarning("SyndicationFeed is empty, so no articles.");
-                return null;
-            }
-
-            var articles = new List<Article>();
-            foreach (var item in sf.Items)
-            {
-                var articleUrl = item?.Links?.FirstOrDefault()?.Uri?.AbsoluteUri;
-                var articleTitle = item?.Title?.Text;
-                if (string.IsNullOrWhiteSpace(articleUrl) || string.IsNullOrWhiteSpace(articleTitle))
-                {
-                    continue;
-                }
-
-                var articleId = feedId + articleUrl.Md5();
-                var content = string.Empty;
-                if (item.Content is TextSyndicationContent textContent)
-                {
-                    content = textContent.Text;
-                }
-                Article article = new Article
-                {
-                    Id = articleId,
-                    Url = articleUrl,
-                    FeedId = feedId,
-                    Title = articleTitle,
-                    Summary = this.Simplify(item.Summary?.Text),
-                    Published = item.PublishDate.LocalDateTime,
-                    Updated = item.LastUpdatedTime.LocalDateTime,
-                    Keyword = string.Join(',', item.Categories?.Select(c => c?.Name)),
-                    Content = this.Simplify(content),
-                    Contributors = string.Join(',', item.Contributors?.Select(c => c?.Name)),
-                    Authors = string.Join(',', item.Authors?.Select(c => c?.Name)),
-                    Copyright = item.Copyright?.Text
-                };
-                articles.Add(article);
-
-                if (connection.QueryFirstOrDefault<Article>("SELECT * FROM article WHERE id=@Id", new { Id = articleId }) == null)
-                {
-                    connection.Execute("INSERT INTO article(id, url, feed_id, title, summary, published, updated, created, keyword, content, contributors, " +
-                        "authors, copyright) VALUES(@Id, @Url, @FeedId, @Title, @Summary, @Published, @Updated, now(), @Keyword, @Content, " +
-                        "@Contributors, @Authors, @Copyright)", article);
-                }
-                else
-                {
-                    connection.Execute("UPDATE article SET title=@Title, summary=@Summary, published=@Published, updated=@Updated, " +
-                        "keyword=@Keyword, content=@Content, contributors=@Contributors, authors=@Authors, copyright=@Copyright WHERE id=@Id", article);
-                }
-            }
-
-            return articles;
+            return true;
         }
     }
 }
