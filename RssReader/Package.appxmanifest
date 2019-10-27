@@ -7,14 +7,14 @@
   IgnorableNamespaces="uap mp">
 
   <Identity
-    Publisher="CN=Venyo"
-    Version="0.1.0.0" 
-    Name="RssReader"/>
+    Publisher="CN=118B660F-2A1A-4F3F-B230-6218D59401CC"
+    Version="0.2.2.0" 
+    Name="43773VenyoWang.Resader"/>
 
-  <mp:PhoneIdentity PhoneProductId="73ea6731-dc00-45cc-b561-48991d7e7d8a" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
+  <mp:PhoneIdentity PhoneProductId="8bb2fa0a-246c-4a51-9ee9-1d75e93dc8c4" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>
 
   <Properties>
-    <DisplayName>RssReader</DisplayName>
+    <DisplayName>Resader</DisplayName>
     <PublisherDisplayName>VenyoWang</PublisherDisplayName>
     <Logo>Assets\StoreLogo.png</Logo>
   </Properties>
@@ -32,7 +32,7 @@
       Executable="$targetnametoken$.exe"
       EntryPoint="RssReader.App">
       <uap:VisualElements
-        DisplayName="RssReader"
+        DisplayName="Resader"
         Square150x150Logo="Assets\Square150x150Logo.png"
         Square44x44Logo="Assets\Square44x44Logo.png"
         Description="RssReader"

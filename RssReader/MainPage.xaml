@@ -11,15 +11,21 @@
     <!-- xmlns:muxc="using:Microsoft.UI.Xaml.Controls" -->
     <Grid>
         <NavigationView x:Name="NavView" PaneDisplayMode="Left" PaneTitle="RssReader" Loaded="NavView_Loaded"
-                        ItemInvoked="NavView_ItemInvoked">
+                        ItemInvoked="NavView_ItemInvoked" ContextRequested="NavView_ContextRequested" ContextCanceled="NavView_ContextCanceled">
             <NavigationView.MenuItems>
                 <NavigationViewItem Tag="home" Content="Home" Icon="Home"></NavigationViewItem>
                 <NavigationViewItemHeader x:Name="Operations" Content="Operations"/>
                 <NavigationViewItem Tag="add" Content="Add Seed" Icon="Add"></NavigationViewItem>
-                <NavigationViewItem Tag="import" Content="Import OPML" Icon="ImportAll"></NavigationViewItem>
+                <NavigationViewItem Tag="import" Content="Import OPML" Icon="OpenPane"></NavigationViewItem>
+                <NavigationViewItem Tag="export" Content="Export OPML" Icon="ClosePane"></NavigationViewItem>
                 <NavigationViewItem Tag="refreshfeeds" Content="Refresh Feeds" Icon="Refresh"></NavigationViewItem>
                 <NavigationViewItemSeparator/>
             </NavigationView.MenuItems>
+            <NavigationView.Resources>
+                <MenuFlyout x:Key="FeedContextMenu">
+                    <MenuFlyoutItem Text="Delete" Icon="Delete" Click="DeleteMenuItem_Click"/>
+                </MenuFlyout>
+            </NavigationView.Resources>
 
             <Frame x:Name="ContentFrame" Padding="12,0,12,24" IsTabStop="True"/>
         </NavigationView>
