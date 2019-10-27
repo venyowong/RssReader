@@ -19,3 +19,17 @@ GET rss/feeds
 
 ### 获取文章列表
 GET rss/articles?feedId={feedId}&page=0&pageCount=30&endTime{最后的更新时间，可为空}
+
+### 删除订阅
+DELETE rss/feed?feedId={feedId}
+
+### 批量订阅
+POST rss/addfeeds
+
+Request Body:
+```
+[
+    {feed url},
+    {feed url}
+]
+```
