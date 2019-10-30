@@ -11,6 +11,7 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text;
 using System.Threading.Tasks;
 using Windows.Foundation;
@@ -66,7 +67,7 @@ namespace RssReader
             };
         }
 
-        public static T Request<T>(string url, string method)
+        public static T Request<T>(string url, string method, object obj = null)
         {
             try
             {
@@ -77,7 +78,21 @@ namespace RssReader
                 }
                 else if (method == "POST")
                 {
-                    var response = _httpClient.PostAsync(App.BaseUrl + url, null).Result;
+                    StringContent content = null;
+                    if (obj != null)
+                    {
+                        content = new StringContent(JsonConvert.SerializeObject(obj));
+                        content.Headers.ContentType = new MediaTypeHeaderValue("application/json");
+                    }
+                    var response = _httpClient.PostAsync(App.BaseUrl + url, content).Result;
+                    if (response.IsSuccessStatusCode)
+                    {
+                        json = response.Content.ReadAsStringAsync().Result;
+                    }
+                }
+                else if (method == "DELETE")
+                {
+                    var response = _httpClient.DeleteAsync(App.BaseUrl + url).Result;
                     if (response.IsSuccessStatusCode)
                     {
                         json = response.Content.ReadAsStringAsync().Result;

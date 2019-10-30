@@ -9,6 +9,21 @@
     Background="{ThemeResource ApplicationPageBackgroundThemeBrush}">
 
     <Grid>
-        <TextBox HorizontalAlignment="Left" Margin="466,366,0,0" Text="Import" TextWrapping="Wrap" VerticalAlignment="Top"/>
+        <Grid>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"></RowDefinition>
+                <RowDefinition Height="*"></RowDefinition>
+            </Grid.RowDefinitions>
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="4*"></ColumnDefinition>
+                <ColumnDefinition Width="1*"></ColumnDefinition>
+                <ColumnDefinition Width="1*"></ColumnDefinition>
+                <ColumnDefinition Width="6*"></ColumnDefinition>
+            </Grid.ColumnDefinitions>
+
+            <TextBox PlaceholderText="Select a OPML file..." Name="OpmlPath" IsReadOnly="True"></TextBox>
+            <Button Margin="4,0,4,0" Grid.Row="0" Grid.Column="1" HorizontalAlignment="Stretch" Name="SelectButton" Click="SelectButton_Click">Select</Button>
+            <Button Margin="4,0,4,0" Grid.Row="0" Grid.Column="2" HorizontalAlignment="Stretch" Name="ImportButton" Click="ImportButton_Click">Import</Button>
+        </Grid>
     </Grid>
 </Page>
