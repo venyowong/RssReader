@@ -74,7 +74,7 @@ namespace RssServer.Controllers
 
                     #region 订阅
                     var subscription = connection.QueryFirstOrDefault<Subscription>(
-                        "SELECT * FROM subscription WHERE feed_id=@FeedId", new { FeedId = feedId });
+                        "SELECT * FROM subscription WHERE feed_id=@FeedId AND app_id=@AppId", new { FeedId = feedId, AppId = appid });
                     if (subscription == null)
                     {
                         subscription = new Subscription
