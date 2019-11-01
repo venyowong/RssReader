@@ -9,10 +9,10 @@ using Dapper;
 using System.Linq;
 using Rss.Common.Models;
 using Rss.Common.Entities;
-using System.Threading.Tasks;
-using System.Data;
 using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
+using RssServer.Helpers;
+using RssServer.Daos;
 
 namespace RssServer.Controllers
 {
@@ -25,9 +25,11 @@ namespace RssServer.Controllers
 
         private RssRefresher refresher;
 
-        public RssController(IOptions<AppSettings> options, ILogger<RssController> logger, RssRefresher refresher)
+        private Helper helper;
+
+        public RssController(Helper helper, ILogger<RssController> logger, RssRefresher refresher)
         {
-            this.appSettings = options?.Value;
+            this.helper = helper;
             this.logger = logger;
             this.refresher = refresher;
         }
@@ -35,68 +37,18 @@ namespace RssServer.Controllers
         [HttpPost, Route("add"), ModelValidation]
         public object Add([Required]string feed, [Required][FromHeader] string appid)
         {
-            try
+            var subscribeResult = this.SubscribeFeed(feed, appid);
+            return new RssModel
             {
-                var sf = SyndicationFeed.Load(XmlReader.Create(feed));
-                var title = sf?.Title?.Text;
-                if (string.IsNullOrWhiteSpace(title))
-                {
-                    this.logger.LogWarning($"The title of feed({feed}) is null or white space.");
-                    return string.Empty;
-                }
-
-                var result = new RssModel
-                {
-                    Title = title
-                };
-
-                using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
-                {
-                    #region 插入 feed
-                    var feedId = feed.Md5();
-                    var feedEntity = connection.QueryFirstOrDefault<Feed>("SELECT * FROM feed WHERE id=@Id", new { Id = feedId });
-                    if (feedEntity == null)
-                    {
-                        feedEntity = new Feed
-                        {
-                            Id = feedId,
-                            Url = feed,
-                            Title = title
-                        };
-                        connection.Execute("INSERT INTO feed(id, url, title) VALUES(@Id, @Url, @Title)", feedEntity);
-                    }
-                    #endregion
-
-                    #region 订阅
-                    var subscription = connection.QueryFirstOrDefault<Subscription>(
-                        "SELECT * FROM subscription WHERE feed_id=@FeedId", new { FeedId = feedId });
-                    if (subscription == null)
-                    {
-                        subscription = new Subscription
-                        {
-                            AppId = appid,
-                            FeedId = feedId
-                        };
-                        connection.Execute("INSERT INTO subscription(app_id, feed_id) VALUES(@AppId, @FeedId)", subscription);
-                    }
-                    #endregion
-
-                    result.Articles = Helper.ParseArticles(sf, feedId, connection);
-                }
-
-                return result;
-            }
-            catch(Exception e)
-            {
-                this.logger.LogError(e, "failed to add");
-                return new StatusCodeResult(500);
-            }
+                Title = subscribeResult.Title,
+                Articles = subscribeResult.Articles
+            };
         }
 
         [HttpGet, Route("feeds"), ModelValidation]
         public object GetFeeds([Required][FromHeader] string appid)
         {
-            using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+            using (var connection = this.helper.GetDbConnection())
             {
                 return connection.Query<Feed>("SELECT * FROM feed WHERE id IN (SELECT feed_id FROM subscription WHERE app_id=@AppId)",
                     new { AppId = appid });
@@ -111,7 +63,7 @@ namespace RssServer.Controllers
                 return new StatusCodeResult(204);
             }
 
-            using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+            using (var connection = this.helper.GetDbConnection())
             {
                 var sql = string.Empty;
                 DateTime end = default;
@@ -136,7 +88,7 @@ namespace RssServer.Controllers
         [HttpGet, Route("refresh")]
         public object Refresh()
         {
-            using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+            using (var connection = this.helper.GetDbConnection())
             {
                 var feeds = connection.Query<Feed>("SELECT * FROM feed");
                 if (feeds != null && feeds.Any())
@@ -154,7 +106,7 @@ namespace RssServer.Controllers
         [HttpDelete, Route("feed"), ModelValidation]
         public object DeleteFeed([Required]string feedId, [Required][FromHeader] string appid)
         {
-            using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+            using (var connection = this.helper.GetDbConnection())
             {
                 if (connection.Execute("DELETE FROM subscription WHERE app_id=@AppId AND feed_id=@FeedId", new
                 {
@@ -182,54 +134,9 @@ namespace RssServer.Controllers
             var counter = new Counter();
             feeds.AsParallel().ForAll(feed =>
             {
-                try
+                if (this.SubscribeFeed(feed, appid).Title != null)
                 {
-                    var sf = SyndicationFeed.Load(XmlReader.Create(feed));
-                    var title = sf?.Title?.Text;
-                    if (string.IsNullOrWhiteSpace(title))
-                    {
-                        this.logger.LogWarning($"The title of feed({feed}) is null or white space.");
-                        return;
-                    }
-
                     counter.Increment();
-                    using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
-                    {
-                        #region 插入 feed
-                        var feedId = feed.Md5();
-                        var feedEntity = connection.QueryFirstOrDefault<Feed>("SELECT * FROM feed WHERE id=@Id", new { Id = feedId });
-                        if (feedEntity == null)
-                        {
-                            feedEntity = new Feed
-                            {
-                                Id = feedId,
-                                Url = feed,
-                                Title = title
-                            };
-                            connection.Execute("INSERT INTO feed(id, url, title) VALUES(@Id, @Url, @Title)", feedEntity);
-                        }
-                        #endregion
-
-                        #region 订阅
-                        var subscription = connection.QueryFirstOrDefault<Subscription>(
-                            "SELECT * FROM subscription WHERE feed_id=@FeedId", new { FeedId = feedId });
-                        if (subscription == null)
-                        {
-                            subscription = new Subscription
-                            {
-                                AppId = appid,
-                                FeedId = feedId
-                            };
-                            connection.Execute("INSERT INTO subscription(app_id, feed_id) VALUES(@AppId, @FeedId)", subscription);
-                        }
-                        #endregion
-
-                        Helper.ParseArticles(sf, feedId, connection);
-                    }
-                }
-                catch (Exception e)
-                {
-                    this.logger.LogError(e, $"failed to add {feed}");
                 }
             });
 
@@ -241,6 +148,79 @@ namespace RssServer.Controllers
             {
                 return null;
             }
+        }
+
+        private (string Title, List<Article> Articles) SubscribeFeed(string feed, string appId)
+        {
+            try
+            {
+                SyndicationFeed sf = null;
+                String title = null;
+                CodeHollow.FeedReader.Feed cfeed = null;
+                try 
+                {
+                    sf = SyndicationFeed.Load(XmlReader.Create(feed));
+                    title = sf?.Title?.Text;
+                }
+                catch
+                {
+                    cfeed = CodeHollow.FeedReader.FeedReader.ReadAsync(feed).Result;
+                    title = cfeed?.Title;
+                }
+                if (string.IsNullOrWhiteSpace(title))
+                {
+                    this.logger.LogWarning($"The title of feed({feed}) is null or white space.");
+                    return (null, null);
+                }
+
+                using (var connection = this.helper.GetDbConnection())
+                {
+                    #region 插入 feed
+                    var feedDao = new FeedDao(connection);
+                    var feedId = feed.Md5();
+                    var feedEntity = feedDao.GetFeed(feedId);
+                    if (feedEntity == null)
+                    {
+                        feedEntity = new Rss.Common.Entities.Feed
+                        {
+                            Id = feedId,
+                            Url = feed,
+                            Title = title
+                        };
+                        feedDao.InsertFeed(feedEntity);
+                    }
+                    #endregion
+
+                    #region 订阅
+                    var subscriptionDao = new SubscriptionDao(connection);
+                    var subscription = subscriptionDao.GetSubscription(appId, feedId);
+                    if (subscription == null)
+                    {
+                        subscription = new Subscription
+                        {
+                            AppId = appId,
+                            FeedId = feedId
+                        };
+                        subscriptionDao.InsertSubscription(subscription);
+                    }
+                    #endregion
+
+                    if (sf != null)
+                    {
+                        return (title, this.helper.ParseArticles(sf, feedId, connection));
+                    }
+                    else
+                    {
+                        return (title, this.helper.ParseArticles(cfeed, feedId, connection));
+                    }
+                }
+            }
+            catch (Exception e)
+            {
+                this.logger.LogError(e, $"failed to add {feed}");
+            }
+
+            return (null, null);
         }
     }
 }
