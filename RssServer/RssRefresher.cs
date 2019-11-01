@@ -1,9 +1,9 @@
-﻿using Microsoft.Extensions.Options;
+﻿using CodeHollow.FeedReader;
+using Microsoft.Extensions.Options;
 using Niolog;
+using RssServer.Helpers;
 using System;
 using System.Collections.Concurrent;
-using System.Collections.Generic;
-using System.Linq;
 using System.ServiceModel.Syndication;
 using System.Threading;
 using System.Threading.Tasks;
@@ -17,11 +17,11 @@ namespace RssServer
 
         private int worker = 3;
 
-        private AppSettings appSettings;
+        private Helper helper;
 
-        public RssRefresher(IOptions<AppSettings> options)
+        public RssRefresher(Helper helper)
         {
-            this.appSettings = options?.Value;
+            this.helper = helper;
 
             for(int i = 0; i < this.worker; i++)
             {
@@ -46,20 +46,34 @@ namespace RssServer
                 try
                 {
                     var sf = SyndicationFeed.Load(XmlReader.Create(feed));
-                    using (var connection = Helper.GetDbConnection(this.appSettings?.MySql?.ConnectionString))
+                    using (var connection = this.helper.GetDbConnection())
                     {
-                        Helper.ParseArticles(sf, feed.Md5(), connection);
+                        this.helper.ParseArticles(sf, feed.Md5(), connection);
                     }
                     NiologManager.CreateLogger().Info()
                         .Message($"refreshed {feed}")
                         .Write();
                 }
-                catch (Exception e)
+                catch
                 {
-                    NiologManager.CreateLogger().Error()
-                        .Message($"error occured when refreshing {feed}")
-                        .Exception(e)
-                        .Write();
+                    try 
+                    {
+                        var feedEntity = FeedReader.ReadAsync(feed).Result;
+                        using (var connection = this.helper.GetDbConnection())
+                        {
+                            this.helper.ParseArticles(feedEntity, feed.Md5(), connection);
+                        }
+                        NiologManager.CreateLogger().Info()
+                            .Message($"refreshed {feed}")
+                            .Write();
+                    }
+                    catch (Exception e)
+                    {
+                        NiologManager.CreateLogger().Error()
+                            .Message($"error occured when refreshing {feed}")
+                            .Exception(e)
+                            .Write();
+                    }
                 }
             }
         }
