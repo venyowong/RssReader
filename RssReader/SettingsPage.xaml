@@ -13,11 +13,12 @@
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
             <RowDefinition Height="Auto"></RowDefinition>
+            <RowDefinition Height="Auto"></RowDefinition>
         </Grid.RowDefinitions>
         <Grid.ColumnDefinitions>
-            <ColumnDefinition Width="1*"></ColumnDefinition>
+            <ColumnDefinition Width="2*"></ColumnDefinition>
             <ColumnDefinition Width="3*"></ColumnDefinition>
-            <ColumnDefinition Width="8*"></ColumnDefinition>
+            <ColumnDefinition Width="7*"></ColumnDefinition>
         </Grid.ColumnDefinitions>
 
         <TextBlock Margin="2,4,2,4" Grid.Row="0" Grid.Column="0" FontSize="18" Text="AppId:" TextAlignment="Center"></TextBlock>
@@ -26,6 +27,12 @@
         <TextBlock Margin="2,4,2,4" Grid.Row="1" Grid.Column="0" FontSize="18" Text="BaseUrl:" TextAlignment="Center"></TextBlock>
         <TextBox Margin="2,4,2,4" Name="BaseUrl" Grid.Row="1" Grid.Column="1" FontSize="18"></TextBox>
 
-        <Button Margin="2,4,2,4" Name="SaveButton" Grid.Row="2" Grid.Column="1" FontSize="18" HorizontalAlignment="Stretch" Click="SaveButton_Click">Save</Button>
+        <TextBlock Margin="2,4,2,4" Grid.Row="2" Grid.Column="0" FontSize="18" Text="UseWebView:" TextAlignment="Center"></TextBlock>
+        <ComboBox Margin="2,4,2,4" Name="UseWebView" Grid.Row="2" Grid.Column="1" FontSize="18">
+            <ComboBoxItem Content="true" />
+            <ComboBoxItem Content="false" />
+        </ComboBox>
+
+        <Button Margin="2,4,2,4" Name="SaveButton" Grid.Row="3" Grid.Column="1" FontSize="18" HorizontalAlignment="Stretch" Click="SaveButton_Click">Save</Button>
     </Grid>
 </Page>

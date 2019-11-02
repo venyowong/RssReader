@@ -1,7 +1,6 @@
-﻿using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
+﻿using Niolog;
 using Rss.Common.Entities;
+using RssReader.Daos;
 using RssReader.Models;
 using RssReader.ViewModels;
 using System;
@@ -36,6 +35,8 @@ namespace RssReader
 
         private string feedId = null;
 
+        private ArticleListPageParams parameters;
+
         public RssViewModel RssModel { get; set; } = new RssViewModel();
 
         public ArticleListPage()
@@ -51,6 +52,7 @@ namespace RssReader
 
                 if (e.Parameter != null && e.Parameter is ArticleListPageParams parameters)
                 {
+                    this.parameters = parameters;
                     this.feedId = parameters.FeedId;
                     this.endTime = parameters.EndTime;
                     var url = $"/rss/articles?feedId={this.feedId}&page=0&pageCount=30";
@@ -65,7 +67,7 @@ namespace RssReader
                         return;
                     }
 
-                    this.RssModel.Articles = this.GetUnreadArticles(articles);
+                    this.RssModel.Articles = this.GetUnreadArticles(articles, parameters.ArticleId);
                 }
             }
             catch (Exception ex)
@@ -85,7 +87,23 @@ namespace RssReader
                         article.Icon = new SymbolIcon((Symbol)0xE73E);
                     }
                     Helper.MarkRead(article.Url);
-                    Windows.System.Launcher.LaunchUriAsync(new Uri(article.Url));
+                    if (this.parameters != null)
+                    {
+                        this.parameters.ArticleId = article.Id;
+                        DateTime.TryParse(article.Published, out DateTime published);
+                        this.parameters.EndTime = published.AddSeconds(1);
+                    }
+                    if (Helper.App.UseWebView)
+                    {
+                        this.Frame.Navigate(typeof(WebPage), new WebPageParams
+                        {
+                            Url = article.Url
+                        });
+                    }
+                    else
+                    {
+                        Windows.System.Launcher.LaunchUriAsync(new Uri(article.Url));
+                    }
                 }
             }
             catch (Exception ex)
@@ -98,7 +116,7 @@ namespace RssReader
         {
             try
             {
-                this.RssModel.Articles?.AsParallel().ForAll(article => Helper.MarkRead(article.Url));
+                this.RssModel.Articles?.ForEach(article => Helper.MarkRead(article.Url));
 
                 this.Frame.Navigate(typeof(ArticleListPage), new ArticleListPageParams
                 {
@@ -200,19 +218,14 @@ namespace RssReader
         /// </summary>
         /// <param name="articles"></param>
         /// <returns></returns>
-        private List<ArticleViewModel> GetUnreadArticles(List<Article> articles)
+        private List<ArticleViewModel> GetUnreadArticles(List<Article> articles, string articleId = null)
         {
             if (articles == null || !articles.Any())
             {
                 return null;
             }
 
-            using (var context = new RssDbContext())
-            {
-                Helper.EnsureTableExist(context, context.ReadRecords);
-            }
-            var unreadArticles = articles.OrderByDescending(a => a.Published).AsParallel()
-                .AsOrdered()
+            var unreadArticles = articles.OrderByDescending(a => a.Published)
                 .Where(article =>
                 {
                     if (this.endTime == default || article.Published < this.endTime)
@@ -220,14 +233,28 @@ namespace RssReader
                         this.endTime = article.Published;
                     }
 
-                    using (var context = new RssDbContext())
+                    if (articleId == article.Id)
                     {
-                        return context.ReadRecords.FirstOrDefault(record => record.Url == article.Url) == null;
+                        return true;
                     }
+
+                    var rssDao = new RssDao();
+                    return rssDao.GetReadRecord(article.Url) == null;
                 });
             if (unreadArticles.Any())
             {
-                return unreadArticles.Select(article => this.ConvertArticle(article)).ToList();
+                var result = unreadArticles.Select(article => this.ConvertArticle(article)).ToList();
+                result.ForEach(m =>
+                {
+                    if (m.Id == articleId && m.Icon == null)
+                    {
+                        if (m.Icon == null)
+                        {
+                            m.Icon = new SymbolIcon((Symbol)0xE73E);
+                        }
+                    }
+                });
+                return result;
             }
             else
             {

@@ -134,6 +134,8 @@
     <Compile Include="ArticleListPage.xaml.cs">
       <DependentUpon>ArticleListPage.xaml</DependentUpon>
     </Compile>
+    <Compile Include="Daos\AppDao.cs" />
+    <Compile Include="Daos\RssDao.cs" />
     <Compile Include="ExportPage.xaml.cs">
       <DependentUpon>ExportPage.xaml</DependentUpon>
     </Compile>
@@ -150,6 +152,7 @@
     <Compile Include="Models\App.cs" />
     <Compile Include="Models\ArticleListPageParams.cs" />
     <Compile Include="Models\Rss.cs" />
+    <Compile Include="Models\WebPageParams.cs" />
     <Compile Include="Opml\Body.cs" />
     <Compile Include="Opml\Head.cs" />
     <Compile Include="Opml\Opml.cs" />
@@ -160,6 +163,9 @@
     </Compile>
     <Compile Include="ViewModels\ArticleViewModel.cs" />
     <Compile Include="ViewModels\RssViewModel.cs" />
+    <Compile Include="WebPage.xaml.cs">
+      <DependentUpon>WebPage.xaml</DependentUpon>
+    </Compile>
   </ItemGroup>
   <ItemGroup>
     <AppxManifest Include="Package.appxmanifest">
@@ -211,10 +217,14 @@
       <SubType>Designer</SubType>
       <Generator>MSBuild:Compile</Generator>
     </Page>
+    <Page Include="WebPage.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
-    <PackageReference Include="Microsoft.EntityFrameworkCore.Sqlite">
-      <Version>2.2.6</Version>
+    <PackageReference Include="LiteDB">
+      <Version>4.1.4</Version>
     </PackageReference>
     <PackageReference Include="Microsoft.NETCore.UniversalWindowsPlatform">
       <Version>6.2.9</Version>

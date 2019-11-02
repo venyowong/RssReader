@@ -1,20 +1,7 @@
-﻿using RssReader.Models;
+﻿using RssReader.Daos;
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Runtime.InteropServices.WindowsRuntime;
-using Windows.Foundation;
-using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
-using Windows.UI.Xaml.Controls.Primitives;
-using Windows.UI.Xaml.Data;
-using Windows.UI.Xaml.Input;
-using Windows.UI.Xaml.Media;
-using Windows.UI.Xaml.Navigation;
-
-// https://go.microsoft.com/fwlink/?LinkId=234238 上介绍了“空白页”项模板
 
 namespace RssReader
 {
@@ -29,23 +16,29 @@ namespace RssReader
 
             this.AppId.Text = Helper.App.Id;
             this.BaseUrl.Text = Helper.App.BaseUrl;
+            this.UseWebView.Text = Helper.App.UseWebView.ToString().ToLower();
+            if (Helper.App.UseWebView)
+            {
+                this.UseWebView.SelectedIndex = 0;
+            }
+            else
+            {
+                this.UseWebView.SelectedIndex = 1;
+            }
         }
 
         private void SaveButton_Click(object sender, RoutedEventArgs e)
         {
             try
             {
-                using(var context = new AppDbContext())
-                {
-                    context.App.Remove(Helper.App);
-                    context.SaveChanges();
-                    Helper.App.Id = this.AppId.Text;
-                    Helper.App.BaseUrl = this.BaseUrl.Text;
-                    context.App.Add(Helper.App);
-                    context.SaveChanges();
-                    Helper.ReInit();
-                    Helper.ShowMessageDialog("Message", "Save ok.");
-                }
+                var appDao = new AppDao();
+                appDao.DeleteApp();
+                Helper.App.Id = this.AppId.Text;
+                Helper.App.BaseUrl = this.BaseUrl.Text;
+                Helper.App.UseWebView = this.UseWebView.SelectedIndex == 0;
+                appDao.InsertApp(Helper.App);
+                Helper.ReInit();
+                Helper.ShowMessageDialog("Message", "Save ok.");
             }
             catch (Exception ex)
             {

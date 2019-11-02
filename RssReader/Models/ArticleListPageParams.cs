@@ -11,5 +11,7 @@ namespace RssReader.Models
         public string FeedId { get; set; }
 
         public DateTime EndTime { get; set; }
+
+        public string ArticleId { get; set; }
     }
 }

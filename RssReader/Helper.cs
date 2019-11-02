@@ -1,10 +1,7 @@
-﻿using Microsoft.Data.Sqlite;
-using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.Infrastructure;
-using Microsoft.EntityFrameworkCore.Storage;
-using Newtonsoft.Json;
+﻿using Newtonsoft.Json;
 using Niolog;
 using Niolog.Interfaces;
+using RssReader.Daos;
 using RssReader.Models;
 using System;
 using System.Collections.Generic;
@@ -22,43 +19,23 @@ namespace RssReader
 {
     public static class Helper
     {
-        public static Models.App App { get; set; }
+        public static Application App { get; set; }
 
         private static readonly HttpClient _httpClient = new HttpClient();
 
         static Helper()
         {
-            using (var db = new AppDbContext())
+            var appDao = new AppDao();
+            App = appDao.GetApp();
+            if (App == null)
             {
-                Models.App app = null;
-                try
+                App = new Application
                 {
-                    app = db.App.FirstOrDefault();
-                }
-                catch(SqliteException ex)
-                {
-                    if (ex?.Message?.ToLower().Contains("no such table") ?? false)
-                    {
-                        db.Database.EnsureDeleted();
-                        RelationalDatabaseCreator databaseCreator =
-                            (RelationalDatabaseCreator)db.Database.GetService<IDatabaseCreator>();
-                        databaseCreator.CreateTables();
-                    }
-                }
-                if (app == null)
-                {
-                    app = new Models.App
-                    {
-                        Id = Guid.NewGuid().ToString()
-                    };
-                    db.Add(app);
-                    db.SaveChanges();
-                }
-
-                App = app;
-
-                _httpClient.DefaultRequestHeaders.Add("appid", app.Id);
+                    Id = Guid.NewGuid().ToString()
+                };
+                appDao.InsertApp(App);
             }
+            _httpClient.DefaultRequestHeaders.Add("appid", App.Id);
 
             NiologManager.DefaultWriters = new ILogWriter[]
             {
@@ -123,24 +100,6 @@ namespace RssReader
             return dialog.ShowAsync();
         }
 
-        public static void EnsureTableExist<T>(DbContext context, DbSet<T> dbSet) where T : class
-        {
-            try
-            {
-                dbSet.FirstOrDefault();
-            }
-            catch(SqliteException e)
-            {
-                if (e?.Message?.ToLower().Contains("no such table") ?? false)
-                {
-                    context.Database.EnsureDeleted();
-                    RelationalDatabaseCreator databaseCreator =
-                        (RelationalDatabaseCreator)context.Database.GetService<IDatabaseCreator>();
-                    databaseCreator.CreateTables();
-                }
-            }
-        }
-
         public static void ReInit()
         {
             _httpClient.DefaultRequestHeaders.Remove("appid");
@@ -164,19 +123,17 @@ namespace RssReader
 
         public static void MarkRead(string url)
         {
-            using (var context = new RssDbContext())
+            var rssDao = new RssDao();
+            rssDao.InsertReadRecord(new ReadRecord
             {
-                EnsureTableExist(context, context.ReadRecords);
-                if (context.ReadRecords.FirstOrDefault(record => record.Url == url) == null)
-                {
-                    context.ReadRecords.Add(new ReadRecord
-                    {
-                        Url = url,
-                        Time = DateTime.Now
-                    });
-                    context.SaveChanges();
-                }
-            }
+                Url = url,
+                Time = DateTime.Now
+            });
+        }
+
+        public static INiologger GetLogger()
+        {
+            return NiologManager.CreateLogger();
         }
     }
 }

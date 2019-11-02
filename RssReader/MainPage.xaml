@@ -11,7 +11,8 @@
     <!-- xmlns:muxc="using:Microsoft.UI.Xaml.Controls" -->
     <Grid>
         <NavigationView x:Name="NavView" PaneDisplayMode="Left" PaneTitle="RssReader" Loaded="NavView_Loaded"
-                        ItemInvoked="NavView_ItemInvoked" ContextRequested="NavView_ContextRequested" ContextCanceled="NavView_ContextCanceled">
+                        ItemInvoked="NavView_ItemInvoked" ContextRequested="NavView_ContextRequested" ContextCanceled="NavView_ContextCanceled"
+                        IsBackEnabled="True" IsBackButtonVisible="Visible" BackRequested="NavView_BackRequested">
             <NavigationView.MenuItems>
                 <NavigationViewItem Tag="home" Content="Home" Icon="Home"></NavigationViewItem>
                 <NavigationViewItemHeader x:Name="Operations" Content="Operations"/>

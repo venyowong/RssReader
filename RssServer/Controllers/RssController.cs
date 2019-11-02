@@ -1,9 +1,7 @@
 ﻿using Microsoft.AspNetCore.Mvc;
-using Microsoft.Extensions.Options;
 using System;
 using System.Collections.Generic;
 using System.ServiceModel.Syndication;
-using System.Text;
 using System.Xml;
 using Dapper;
 using System.Linq;
@@ -19,8 +17,6 @@ namespace RssServer.Controllers
     [Route("rss")]
     public class RssController : Controller
     {
-        private AppSettings appSettings;
-
         private ILogger<RssController> logger;
 
         private RssRefresher refresher;

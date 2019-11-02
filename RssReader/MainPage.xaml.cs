@@ -7,6 +7,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
+using Windows.System;
 using Windows.UI.Xaml;
 using Windows.UI.Xaml.Controls;
 using Windows.UI.Xaml.Controls.Primitives;
@@ -49,6 +50,23 @@ namespace RssReader
                 this.NavView.SelectedItem = this.NavView.MenuItems[0];
                 this.NavView_Navigate("home", new EntranceNavigationTransitionInfo());
                 this.RefreshFeeds();
+
+                // Add keyboard accelerators for backwards navigation.
+                var goBack = new KeyboardAccelerator { Key = VirtualKey.GoBack };
+                goBack.Invoked += BackInvoked;
+                this.KeyboardAccelerators.Add(goBack);
+
+                // ALT routes here
+                var altLeft = new KeyboardAccelerator
+                {
+                    Key = VirtualKey.Left,
+                    Modifiers = VirtualKeyModifiers.Menu
+                };
+                altLeft.Invoked += BackInvoked;
+                this.KeyboardAccelerators.Add(altLeft);
+
+                // Add handler for ContentFrame navigation.
+                ContentFrame.Navigated += On_Navigated;
             }
             catch (Exception ex)
             {
@@ -169,6 +187,72 @@ namespace RssReader
             {
                 this.feedItems.Remove((NavigationViewItem)this.feedMenuFlyout.Target);
                 this.NavView.MenuItems.Remove(this.feedMenuFlyout.Target);
+            }
+        }
+
+        private void NavView_BackRequested(NavigationView sender, NavigationViewBackRequestedEventArgs args)
+        {
+            On_BackRequested();
+        }
+
+        private void BackInvoked(KeyboardAccelerator sender,
+                                 KeyboardAcceleratorInvokedEventArgs args)
+        {
+            On_BackRequested();
+            args.Handled = true;
+        }
+
+        private bool On_BackRequested()
+        {
+            if (!ContentFrame.CanGoBack)
+                return false;
+
+            // Don't go back if the nav pane is overlayed.
+            if (NavView.IsPaneOpen &&
+                (NavView.DisplayMode == NavigationViewDisplayMode.Compact ||
+                 NavView.DisplayMode == NavigationViewDisplayMode.Minimal))
+                return false;
+
+            ContentFrame.GoBack();
+            return true;
+        }
+
+        private void On_Navigated(object sender, NavigationEventArgs e)
+        {
+            NavView.IsBackEnabled = ContentFrame.CanGoBack;
+
+            if (ContentFrame.SourcePageType == typeof(SettingsPage))
+            {
+                // SettingsItem is not part of NavView.MenuItems, and doesn't have a Tag.
+                NavView.SelectedItem = (NavigationViewItem)NavView.SettingsItem;
+                NavView.Header = "Settings";
+            }
+            else if (ContentFrame.SourcePageType != null)
+            {
+                var item = _pages.FirstOrDefault(p => p.Value == e.SourcePageType);
+                var tag = string.Empty;
+                if (string.IsNullOrWhiteSpace(item.Key))
+                {
+                    if (e.SourcePageType == typeof(ArticleListPage) && e.Parameter is ArticleListPageParams parameters)
+                    {
+                        tag = parameters.FeedId;
+                    }
+                    else
+                    {
+                        return;
+                    }
+                }
+                else
+                {
+                    tag = item.Key;
+                }
+
+                NavView.SelectedItem = NavView.MenuItems
+                    .OfType<NavigationViewItem>()
+                    .First(n => n.Tag.Equals(tag));
+
+                NavView.Header =
+                    ((NavigationViewItem)NavView.SelectedItem)?.Content?.ToString();
             }
         }
     }
