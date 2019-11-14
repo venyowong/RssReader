@@ -35,7 +35,7 @@ namespace RssServer
             {
                 if (this.queue.Count <= 0)
                 {
-                    SpinWait.SpinUntil(() => this.queue.Count > 0);
+                    Thread.Sleep(1000);
                 }
 
                 if (!this.queue.TryDequeue(out string feed))
