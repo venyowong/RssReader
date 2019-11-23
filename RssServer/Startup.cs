@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 using System.Threading.Tasks;
+using Coravel;
+using Coravel.Scheduling.Schedule.Interfaces;
 using Microsoft.AspNetCore.Builder;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.HttpsPolicy;
@@ -32,13 +34,14 @@ namespace RssServer
             services.AddOptions()
                 .Configure<AppSettings>(this.Configuration);
             services.AddSingleton<Helper>();
-            services.AddSingleton<RssRefresher>();
+            services.AddTransient<RssFetcher>();
             services.AddControllers();
+            services.AddScheduler();
         }
 
         // This method gets called by the runtime. Use this method to configure the HTTP request pipeline.
         public void Configure(IApplicationBuilder app, IWebHostEnvironment env, ILoggerFactory loggerFactory,
-            IOptions<AppSettings> appSettings)
+            IOptions<AppSettings> appSettings, ILogger<IScheduler> schedulerLogger)
         {
             if (env.IsDevelopment())
             {
@@ -51,6 +54,23 @@ namespace RssServer
                 new ConsoleLogWriter()
             };
             loggerFactory.AddProvider(new LoggerProvider());
+
+            var provider = app.ApplicationServices;
+            provider.UseScheduler(scheduler =>
+            {
+                scheduler.Schedule<RssFetcher>()
+                    .EveryFiveMinutes()
+                    .PreventOverlapping("RssFetcher");
+            })
+            .LogScheduledTaskProgress(schedulerLogger)
+            .OnError(e =>
+            {
+                var logger = NiologManager.CreateLogger();
+                logger.Warn()
+                    .Message("Something goes wrong...")
+                    .Exception(e, true)
+                    .Write();
+            });
 
             app.UseRouting();
 

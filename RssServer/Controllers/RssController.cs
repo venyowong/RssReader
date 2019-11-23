@@ -19,15 +19,15 @@ namespace RssServer.Controllers
     {
         private ILogger<RssController> logger;
 
-        private RssRefresher refresher;
+        private RssFetcher fetcher;
 
         private Helper helper;
 
-        public RssController(Helper helper, ILogger<RssController> logger, RssRefresher refresher)
+        public RssController(Helper helper, ILogger<RssController> logger, RssFetcher fetcher)
         {
             this.helper = helper;
             this.logger = logger;
-            this.refresher = refresher;
+            this.fetcher = fetcher;
         }
 
         [HttpPost, Route("add"), ModelValidation]
@@ -81,24 +81,6 @@ namespace RssServer.Controllers
             }
         }
 
-        [HttpGet, Route("refresh")]
-        public object Refresh()
-        {
-            using (var connection = this.helper.GetDbConnection())
-            {
-                var feeds = connection.Query<Feed>("SELECT * FROM feed");
-                if (feeds != null && feeds.Any())
-                {
-                    foreach(var feed in feeds)
-                    {
-                        this.refresher.PushFeed(feed.Url);
-                    }
-                }
-            }
-
-            return true;
-        }
-
         [HttpDelete, Route("feed"), ModelValidation]
         public object DeleteFeed([Required]string feedId, [Required][FromHeader] string appid)
         {
@@ -148,75 +130,46 @@ namespace RssServer.Controllers
 
         private (string Title, List<Article> Articles) SubscribeFeed(string feed, string appId)
         {
-            try
+            var result = this.fetcher.Fetch(feed);
+            if (result == default)
             {
-                SyndicationFeed sf = null;
-                String title = null;
-                CodeHollow.FeedReader.Feed cfeed = null;
-                try 
-                {
-                    sf = SyndicationFeed.Load(XmlReader.Create(feed));
-                    title = sf?.Title?.Text;
-                }
-                catch
-                {
-                    cfeed = CodeHollow.FeedReader.FeedReader.ReadAsync(feed).Result;
-                    title = cfeed?.Title;
-                }
-                if (string.IsNullOrWhiteSpace(title))
-                {
-                    this.logger.LogWarning($"The title of feed({feed}) is null or white space.");
-                    return (null, null);
-                }
-
-                using (var connection = this.helper.GetDbConnection())
-                {
-                    #region 插入 feed
-                    var feedDao = new FeedDao(connection);
-                    var feedId = feed.Md5();
-                    var feedEntity = feedDao.GetFeed(feedId);
-                    if (feedEntity == null)
-                    {
-                        feedEntity = new Rss.Common.Entities.Feed
-                        {
-                            Id = feedId,
-                            Url = feed,
-                            Title = title
-                        };
-                        feedDao.InsertFeed(feedEntity);
-                    }
-                    #endregion
-
-                    #region 订阅
-                    var subscriptionDao = new SubscriptionDao(connection);
-                    var subscription = subscriptionDao.GetSubscription(appId, feedId);
-                    if (subscription == null)
-                    {
-                        subscription = new Subscription
-                        {
-                            AppId = appId,
-                            FeedId = feedId
-                        };
-                        subscriptionDao.InsertSubscription(subscription);
-                    }
-                    #endregion
-
-                    if (sf != null)
-                    {
-                        return (title, this.helper.ParseArticles(sf, feedId, connection));
-                    }
-                    else
-                    {
-                        return (title, this.helper.ParseArticles(cfeed, feedId, connection));
-                    }
-                }
-            }
-            catch (Exception e)
-            {
-                this.logger.LogError(e, $"failed to add {feed}");
+                return result;
             }
 
-            return (null, null);
+            using (var connection = this.helper.GetDbConnection())
+            {
+                #region 插入 feed
+                var feedDao = new FeedDao(connection);
+                var feedId = feed.Md5();
+                var feedEntity = feedDao.GetFeed(feedId);
+                if (feedEntity == null)
+                {
+                    feedEntity = new Rss.Common.Entities.Feed
+                    {
+                        Id = feedId,
+                        Url = feed,
+                        Title = result.Title
+                    };
+                    feedDao.InsertFeed(feedEntity);
+                }
+                #endregion
+
+                #region 订阅
+                var subscriptionDao = new SubscriptionDao(connection);
+                var subscription = subscriptionDao.GetSubscription(appId, feedId);
+                if (subscription == null)
+                {
+                    subscription = new Subscription
+                    {
+                        AppId = appId,
+                        FeedId = feedId
+                    };
+                    subscriptionDao.InsertSubscription(subscription);
+                }
+                #endregion
+            }
+
+            return result;
         }
     }
 }
