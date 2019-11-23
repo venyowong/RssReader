@@ -8,7 +8,7 @@
 
   <Identity
     Publisher="CN=118B660F-2A1A-4F3F-B230-6218D59401CC"
-    Version="0.3.0.0" 
+    Version="0.3.1.0" 
     Name="43773VenyoWang.Resader"/>
 
   <mp:PhoneIdentity PhoneProductId="8bb2fa0a-246c-4a51-9ee9-1d75e93dc8c4" PhonePublisherId="00000000-0000-0000-0000-000000000000"/>

@@ -37,11 +37,14 @@ namespace RssReader
 
         private ArticleListPageParams parameters;
 
+        private MenuFlyout ArticleMenuFlyout;
+
         public RssViewModel RssModel { get; set; } = new RssViewModel();
 
         public ArticleListPage()
         {
             this.InitializeComponent();
+            this.ArticleMenuFlyout = (MenuFlyout)this.ArticleListView.Resources["ArticleContextMenu"];
         }
 
         protected override void OnNavigatedTo(NavigationEventArgs e)
@@ -259,6 +262,59 @@ namespace RssReader
             else
             {
                 return articles.Select(article => this.ConvertArticle(article, true)).ToList();
+            }
+        }
+
+        private void ArticleListView_ContextRequested(UIElement sender, ContextRequestedEventArgs args)
+        {
+            var requestedElement = (FrameworkElement)args.OriginalSource;
+            while ((requestedElement != sender) && !(requestedElement is ListViewItem))
+            {
+                requestedElement = (FrameworkElement)VisualTreeHelper.GetParent(requestedElement);
+            }
+            if (requestedElement != sender)
+            {
+                if (args.TryGetPosition(requestedElement, out Point point))
+                {
+                    this.ArticleMenuFlyout.ShowAt(requestedElement, point);
+                }
+                else
+                {
+                    // Not invoked via pointer, so let XAML choose a default location.
+                    this.ArticleMenuFlyout.ShowAt(requestedElement);
+                }
+
+                args.Handled = true;
+            }
+        }
+
+        private void ArticleListView_ContextCanceled(UIElement sender, RoutedEventArgs args)
+        {
+            this.ArticleMenuFlyout.Hide();
+        }
+
+        private void OpenInBrowser(object sender, RoutedEventArgs e)
+        {
+            if (this.ArticleMenuFlyout.Target is ListViewItem item && item.Content is ArticleViewModel model)
+            {
+                if (model.Icon == null)
+                {
+                    model.Icon = new SymbolIcon((Symbol)0xE73E);
+                }
+                Helper.MarkRead(model.Url);
+                Windows.System.Launcher.LaunchUriAsync(new Uri(model.Url));
+            }
+        }
+
+        private void MarkAsRead(object sender, RoutedEventArgs e)
+        {
+            if (this.ArticleMenuFlyout.Target is ListViewItem item && item.Content is ArticleViewModel model)
+            {
+                if (model.Icon == null)
+                {
+                    model.Icon = new SymbolIcon((Symbol)0xE73E);
+                }
+                Helper.MarkRead(model.Url);
             }
         }
     }

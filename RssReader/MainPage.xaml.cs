@@ -35,12 +35,12 @@ namespace RssReader
             { "export", typeof(ExportPage) }
         };
 
-        private MenuFlyout feedMenuFlyout;
+        private MenuFlyout FeedMenuFlyout;
 
         public MainPage()
         {
             this.InitializeComponent();
-            this.feedMenuFlyout = (MenuFlyout)this.NavView.Resources["FeedContextMenu"];
+            this.FeedMenuFlyout = (MenuFlyout)this.NavView.Resources["FeedContextMenu"];
         }
 
         private void NavView_Loaded(object sender, RoutedEventArgs e)
@@ -163,12 +163,12 @@ namespace RssReader
             {
                 if (args.TryGetPosition(requestedElement, out Point point))
                 {
-                    this.feedMenuFlyout.ShowAt(requestedElement, point);
+                    this.FeedMenuFlyout.ShowAt(requestedElement, point);
                 }
                 else
                 {
                     // Not invoked via pointer, so let XAML choose a default location.
-                    this.feedMenuFlyout.ShowAt(requestedElement);
+                    this.FeedMenuFlyout.ShowAt(requestedElement);
                 }
 
                 args.Handled = true;
@@ -177,16 +177,16 @@ namespace RssReader
 
         private void NavView_ContextCanceled(UIElement sender, RoutedEventArgs args)
         {
-            this.feedMenuFlyout.Hide();
+            this.FeedMenuFlyout.Hide();
         }
 
         private void DeleteMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            var feedId = this.feedMenuFlyout.Target.Tag.ToString();
+            var feedId = this.FeedMenuFlyout.Target.Tag.ToString();
             if (!string.IsNullOrWhiteSpace(Helper.Request<string>($"/rss/feed?feedId={feedId}", "DELETE")))
             {
-                this.feedItems.Remove((NavigationViewItem)this.feedMenuFlyout.Target);
-                this.NavView.MenuItems.Remove(this.feedMenuFlyout.Target);
+                this.feedItems.Remove((NavigationViewItem)this.FeedMenuFlyout.Target);
+                this.NavView.MenuItems.Remove(this.FeedMenuFlyout.Target);
             }
         }
 
@@ -204,6 +204,12 @@ namespace RssReader
 
         private bool On_BackRequested()
         {
+            if (ContentFrame.SourcePageType == typeof(WebPage) && ContentFrame.Content is WebPage webPage
+                && webPage.GoBackWebView())
+            {
+                return true;
+            }
+
             if (!ContentFrame.CanGoBack)
                 return false;
 

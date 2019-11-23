@@ -46,38 +46,39 @@ namespace RssReader
                 }
 
                 var rssModel = Helper.Request<RssModel>("/rss/add?feed=" + HttpUtility.UrlEncode(this.RssUriText.Text), "POST");
-                if (rssModel == null)
+                if (string.IsNullOrWhiteSpace(rssModel?.Title))
                 {
+                    Helper.ShowMessageDialog("Warn", "Cannot parse this feed.");
                     return;
                 }
 
                 this.RssModel.Title = rssModel.Title;
-                this.RssModel.Articles = rssModel.Articles.AsParallel().AsOrdered().Select(article =>
-            {
-                var articleViewModel = new ArticleViewModel
+                this.RssModel.Articles = rssModel.Articles?.AsParallel().AsOrdered().Select(article =>
                 {
-                    Id = article.Id,
-                    Authors = article.Authors,
-                    Contributors = article.Contributors,
-                    Copyright = article.Copyright,
-                    Created = article.Created.ToString("yyyy-MM-dd HH:mm:ss"),
-                    FeedId = article.FeedId,
-                    Keyword = article.Keyword,
-                    Published = article.Published.ToString("yyyy-MM-dd HH:mm:ss"),
-                    Title = article.Title,
-                    Updated = article.Updated.ToString("yyyy-MM-dd HH:mm:ss"),
-                    Url = article.Url
-                };
-                if (!string.IsNullOrWhiteSpace(article.Summary))
-                {
-                    articleViewModel.Summary = _ignoreTagRegex.Replace(article.Summary, " ");
-                }
-                if (!string.IsNullOrWhiteSpace(article.Content))
-                {
-                    articleViewModel.Content = _ignoreTagRegex.Replace(article.Content, " ");
-                }
-                return articleViewModel;
-            }).ToList();
+                    var articleViewModel = new ArticleViewModel
+                    {
+                        Id = article.Id,
+                        Authors = article.Authors,
+                        Contributors = article.Contributors,
+                        Copyright = article.Copyright,
+                        Created = article.Created.ToString("yyyy-MM-dd HH:mm:ss"),
+                        FeedId = article.FeedId,
+                        Keyword = article.Keyword,
+                        Published = article.Published.ToString("yyyy-MM-dd HH:mm:ss"),
+                        Title = article.Title,
+                        Updated = article.Updated.ToString("yyyy-MM-dd HH:mm:ss"),
+                        Url = article.Url
+                    };
+                    if (!string.IsNullOrWhiteSpace(article.Summary))
+                    {
+                        articleViewModel.Summary = _ignoreTagRegex.Replace(article.Summary, " ");
+                    }
+                    if (!string.IsNullOrWhiteSpace(article.Content))
+                    {
+                        articleViewModel.Content = _ignoreTagRegex.Replace(article.Content, " ");
+                    }
+                    return articleViewModel;
+                }).ToList();
             }
             catch (Exception ex)
             {

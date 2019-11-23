@@ -20,7 +20,8 @@
             </Grid.RowDefinitions>
         
             <ListView Margin="0,8,0,0" Grid.Row="0" x:Name="ArticleListView" ItemsSource="{x:Bind RssModel.Articles, Mode=OneWay}" 
-                        ItemClick="ArticleListView_ItemClick" IsItemClickEnabled="True" SelectionMode="None">
+                        ItemClick="ArticleListView_ItemClick" IsItemClickEnabled="True" SelectionMode="None" ContextRequested="ArticleListView_ContextRequested"
+                      ContextCanceled="ArticleListView_ContextCanceled">
                 <ListView.ItemTemplate>
                     <DataTemplate x:DataType="viewmodels:ArticleViewModel">
                         <Grid Margin="0,18,0,0">
@@ -54,6 +55,13 @@
                         </Grid>
                     </DataTemplate>
                 </ListView.ItemTemplate>
+
+                    <ListView.Resources>
+                        <MenuFlyout x:Key="ArticleContextMenu">
+                            <MenuFlyoutItem Text="Open in browser" Icon="NewWindow" Click="OpenInBrowser"/>
+                            <MenuFlyoutItem Text="Mark as read" Icon="Accept" Click="MarkAsRead"/>
+                        </MenuFlyout>
+                    </ListView.Resources>
             </ListView>
 
                 <Grid Grid.Row="1">

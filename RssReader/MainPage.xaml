@@ -16,7 +16,7 @@
             <NavigationView.MenuItems>
                 <NavigationViewItem Tag="home" Content="Home" Icon="Home"></NavigationViewItem>
                 <NavigationViewItemHeader x:Name="Operations" Content="Operations"/>
-                <NavigationViewItem Tag="add" Content="Add Seed" Icon="Add"></NavigationViewItem>
+                <NavigationViewItem Tag="add" Content="Add Feed" Icon="Add"></NavigationViewItem>
                 <NavigationViewItem Tag="import" Content="Import OPML" Icon="OpenPane"></NavigationViewItem>
                 <NavigationViewItem Tag="export" Content="Export OPML" Icon="ClosePane"></NavigationViewItem>
                 <NavigationViewItem Tag="refreshfeeds" Content="Refresh Feeds" Icon="Refresh"></NavigationViewItem>

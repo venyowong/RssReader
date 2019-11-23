@@ -108,7 +108,7 @@ namespace RssReader
 
         private void OpenButton_Click(object sender, RoutedEventArgs e)
         {
-
+            Windows.System.Launcher.LaunchFolderAsync(this.folder);
         }
     }
 }

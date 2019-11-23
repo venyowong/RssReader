@@ -44,5 +44,16 @@ namespace RssReader
                 }
             }
         }
+
+        public bool GoBackWebView()
+        {
+            if (!this.WebView.CanGoBack)
+            {
+                return false;
+            }
+                
+            this.WebView.GoBack();
+            return true;
+        }
     }
 }
