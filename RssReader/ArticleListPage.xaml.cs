@@ -10,6 +10,7 @@ using System.Linq;
 using System.Runtime.InteropServices.WindowsRuntime;
 using System.Text.RegularExpressions;
 using System.Threading.Tasks;
+using Windows.ApplicationModel.DataTransfer;
 using Windows.Foundation;
 using Windows.Foundation.Collections;
 using Windows.UI.Xaml;
@@ -315,6 +316,17 @@ namespace RssReader
                     model.Icon = new SymbolIcon((Symbol)0xE73E);
                 }
                 Helper.MarkRead(model.Url);
+            }
+        }
+
+        private void CopyUrl(object sender, RoutedEventArgs e)
+        {
+            if (this.ArticleMenuFlyout.Target is ListViewItem item && item.Content is ArticleViewModel model)
+            {
+                DataPackage dataPackage = new DataPackage();
+                dataPackage.RequestedOperation = DataPackageOperation.Copy;
+                dataPackage.SetText(model.Url);
+                Clipboard.SetContent(dataPackage);
             }
         }
     }

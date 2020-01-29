@@ -123,11 +123,14 @@ namespace RssReader
 
         public static void MarkRead(string url)
         {
-            var rssDao = new RssDao();
-            rssDao.InsertReadRecord(new ReadRecord
+            Task.Run(() =>
             {
-                Url = url,
-                Time = DateTime.Now
+                var rssDao = new RssDao();
+                rssDao.InsertReadRecord(new ReadRecord
+                {
+                    Url = url,
+                    Time = DateTime.Now
+                });
             });
         }
 

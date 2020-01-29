@@ -59,6 +59,7 @@
                     <ListView.Resources>
                         <MenuFlyout x:Key="ArticleContextMenu">
                             <MenuFlyoutItem Text="Open in browser" Icon="NewWindow" Click="OpenInBrowser"/>
+                            <MenuFlyoutItem Text="Copy url" Icon="Copy" Click="CopyUrl"/>
                             <MenuFlyoutItem Text="Mark as read" Icon="Accept" Click="MarkAsRead"/>
                         </MenuFlyout>
                     </ListView.Resources>
