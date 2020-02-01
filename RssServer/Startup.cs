@@ -16,6 +16,8 @@ using Microsoft.Extensions.Options;
 using Niolog;
 using Niolog.Interfaces;
 using RssServer.Helpers;
+using RssServer.User.Interfaces;
+using RssServer.User.Orleans;
 
 namespace RssServer
 {
@@ -35,6 +37,9 @@ namespace RssServer
                 .Configure<AppSettings>(this.Configuration);
             services.AddSingleton<Helper>();
             services.AddTransient<RssFetcher>();
+            // 若不希望 RssServer 使用用户功能，将 RssServer.User.Orleans 的项目引用去掉，以及注释以下这行代码
+            // 若是想要更换用户功能实现，只需将 RssServer.User.Orleans 的项目引用去掉即可
+            services.AddSingleton<IUserService, UserService>();
             services.AddControllers();
             services.AddScheduler();
         }
@@ -73,7 +78,7 @@ namespace RssServer
             });
 
             app.UseRouting();
-
+            app.UseStaticFiles();
             app.UseAuthorization();
 
             app.UseEndpoints(endpoints =>
