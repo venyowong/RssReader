@@ -11,6 +11,8 @@ using Microsoft.Extensions.Logging;
 using System.ComponentModel.DataAnnotations;
 using RssServer.Helpers;
 using RssServer.Daos;
+using System.Text.RegularExpressions;
+using RssServer.User.Interfaces;
 
 namespace RssServer.Controllers
 {
@@ -23,16 +25,27 @@ namespace RssServer.Controllers
 
         private Helper helper;
 
-        public RssController(Helper helper, ILogger<RssController> logger, RssFetcher fetcher)
+        private IUserService userService;
+
+        private Regex appIdRegex = new Regex("user_(.*)");
+
+        public RssController(Helper helper, ILogger<RssController> logger, RssFetcher fetcher,
+            IUserService userService)
         {
             this.helper = helper;
             this.logger = logger;
             this.fetcher = fetcher;
+            this.userService = userService;
         }
 
         [HttpPost, Route("add"), ModelValidation]
         public object Add([Required]string feed, [Required][FromHeader] string appid)
         {
+            if (!this.VerifyAppId(appid))
+            {
+                return new StatusCodeResult(401);
+            }
+
             var subscribeResult = this.SubscribeFeed(feed, appid);
             return new RssModel
             {
@@ -44,6 +57,11 @@ namespace RssServer.Controllers
         [HttpGet, Route("feeds"), ModelValidation]
         public object GetFeeds([Required][FromHeader] string appid)
         {
+            if (!this.VerifyAppId(appid))
+            {
+                return new StatusCodeResult(401);
+            }
+
             using (var connection = this.helper.GetDbConnection())
             {
                 return connection.Query<Feed>("SELECT * FROM feed WHERE id IN (SELECT feed_id FROM subscription WHERE app_id=@AppId)",
@@ -57,6 +75,10 @@ namespace RssServer.Controllers
             if (page < 0 || pageCount <= 0 || string.IsNullOrWhiteSpace(feedId))
             {
                 return new StatusCodeResult(204);
+            }
+            if (!this.VerifyAppId(appid))
+            {
+                return new StatusCodeResult(401);
             }
 
             using (var connection = this.helper.GetDbConnection())
@@ -84,6 +106,11 @@ namespace RssServer.Controllers
         [HttpDelete, Route("feed"), ModelValidation]
         public object DeleteFeed([Required]string feedId, [Required][FromHeader] string appid)
         {
+            if (!this.VerifyAppId(appid))
+            {
+                return new StatusCodeResult(401);
+            }
+
             using (var connection = this.helper.GetDbConnection())
             {
                 if (connection.Execute("DELETE FROM subscription WHERE app_id=@AppId AND feed_id=@FeedId", new
@@ -107,6 +134,10 @@ namespace RssServer.Controllers
             if (!feeds.Any())
             {
                 return new StatusCodeResult(400);
+            }
+            if (!this.VerifyAppId(appid))
+            {
+                return new StatusCodeResult(401);
             }
 
             var counter = new Counter();
@@ -170,6 +201,24 @@ namespace RssServer.Controllers
             }
 
             return result;
+        }
+    
+        private bool VerifyAppId(string appId)
+        {
+            if (this.userService == null)
+            {
+                return false;
+            }
+
+            var match = this.appIdRegex.Match(appId);
+            if (!match.Success)
+            {
+                return true;
+            }
+
+            var token = this.Request.Headers["access-token"];
+            var userId = match.Groups[1].Value;
+            return this.userService.VerifyToken(userId, token);
         }
     }
 }

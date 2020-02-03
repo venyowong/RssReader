@@ -1,0 +1,57 @@
+﻿<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>RSS Reader</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+    <div id="app" class="container">
+        <a href="./index.html">index</a>
+
+        <form>
+            <div class="form-group">
+                <label for="email">Email address</label>
+                <input type="email" class="form-control" id="email" placeholder="Email">
+            </div>
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" class="form-control" id="password" placeholder="Password">
+            </div>
+            <span class="input-group-btn">
+                <input class="btn btn-default login-button" type="button" value="Login" />
+            </span>
+        </form>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+    <script>
+        $(".login-button").click(function () {
+            $.post("./user/login", { mail: $("#email").val(), password: $("#password").val() },
+                function (data) {
+                    if (!data) {
+                        alert("登录失败");
+                        return;
+                    }
+
+                    if (data.code != 0) {
+                        if (data.message) {
+                            alert(data.message);
+                        }
+                        else {
+                            alert("登录失败");
+                        }
+                        return;
+                    }
+
+                    window.localStorage.setItem("user", JSON.stringify(data.data));
+                    window.location.href = "./subscription.html";
+                })
+        });
+    </script>
+</body>
+</html>

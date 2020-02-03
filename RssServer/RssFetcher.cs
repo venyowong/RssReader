@@ -70,15 +70,22 @@ namespace RssServer
 
         public async Task Invoke()
         {
+            this.logger.LogInformation("fetching rss...");
+            
             using (var connection = this.helper.GetDbConnection())
             {
                 var feeds = await connection.QueryAsync<Feed>("SELECT * FROM feed");
                 if (feeds != null && feeds.Any())
                 {
+                    var tasks = new List<Task>();
                     foreach(var feed in feeds)
                     {
-                        this.Fetch(feed.Url);
+                        tasks.Add(Task.Run(() =>
+                        {
+                            this.Fetch(feed.Url);
+                        }));
                     }
+                    Task.WaitAll(tasks.ToArray(), new TimeSpan(0, 1, 0));
                 }
             }
         }

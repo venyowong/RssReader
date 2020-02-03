@@ -33,6 +33,7 @@ namespace RssServer.User.Orleans
                         .WithReferences();
                 })
                 .Build();
+            this.client.Connect().Wait();
         }
 
         public void Dispose()
@@ -107,6 +108,24 @@ namespace RssServer.User.Orleans
             var userGrain = this.client.GetGrain<IUserGrain>(userId);
             var resetResult = userGrain.ResetPassword(userId, oldPwd, password).Result;
             return resetResult.Code == 0 ? 0 : 1;
+        }
+
+        public bool VerifyToken(string userId, string token)
+        {
+            if (string.IsNullOrWhiteSpace(userId) || string.IsNullOrWhiteSpace(token))
+            {
+                return false;
+            }
+
+            var tokenGrain = this.client.GetGrain<ITokenGrain>(userId);
+            var tokenResult = tokenGrain.Identity(token).Result;
+            if (tokenResult.Code != 0 || string.IsNullOrWhiteSpace(tokenResult.Data))
+            {
+                return false;
+            }
+
+            var user = JsonSerializer.Deserialize<Interfaces.UserEntity>(tokenResult.Data);
+            return user?.Id == userId;
         }
     }
 }

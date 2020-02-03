@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="utf-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <title>RSS Reader</title>
+    <meta content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" name="viewport">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/css/bootstrap.min.css" integrity="sha384-BVYiiSIFeK1dGmJRAkycuHAHRg32OmUcww7on3RYdg4Va+PmSTsz/K68vbdEjh4u" crossorigin="anonymous">
+</head>
+<body>
+    <div id="app" class="container" style="padding-top: 20px;">
+        <div>
+            <a href="./subscription.html">subscription</a>
+        </div>
+
+        <div v-for="article in articles" style="padding-top: 10px;">
+            <a target="_blank" v-bind:href="article.url">{{article.title}}</a>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/jquery@1.12.4/dist/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/popper.js/1.14.3/umd/popper.min.js" integrity="sha384-ZMP7rVo3mIykV+2+9J3UJ46jBk0WLaUAdn689aCwoqbBJiSnjAK/l8WvCWPIPm49" crossorigin="anonymous"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@3.3.7/dist/js/bootstrap.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vue"></script>
+    <script>
+        var user = window.localStorage.getItem("user");
+        if (!user) {
+            window.location.href = "./login.html";
+        }
+        try {
+            user = JSON.parse(user);
+        }
+        catch {}
+        if (!user) {
+            window.location.href = "./login.html";
+        }
+
+        function getQueryString(name) {
+            var reg = new RegExp('(^|&)' + name + '=([^&]*)(&|$)', 'i');
+            var r = window.location.search.substr(1).match(reg);
+            if (r != null) {
+                return unescape(r[2]);
+            }
+            return null;
+        }
+
+        var id = getQueryString("id");
+        var page = 0;
+        var app = new Vue({
+            el: '#app',
+            data:{
+                articles: []
+            }
+        });
+
+        $.ajax({
+            headers: {"appid": `user_${user.id}`, "access-token": user.token},
+            type: "GET",
+            url: `./rss/articles?feedId=${id}&page=${page}&pageCount=20`,
+            success: function(data) {
+                if (data) {
+                    for (var i = 0; i < data.length; i++) {
+                        app.articles.push(data[i]);
+                    }
+                }
+            },
+            error: function(xhr) {
+                if (xhr.status == 401) {
+                    window.location.href = "./login.html";
+                }
+            }
+        });
+    </script>
+</body>
+</html>

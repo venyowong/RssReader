@@ -7,7 +7,7 @@ namespace RssServer.User.Interfaces
     public interface IUserService
     {
         /// <summary>
-        /// 登录
+        /// 登录，未注册则自动注册
         /// <para>-1 参数异常</para>
         /// <para>0 登录成功</para>
         /// <para>1 密码错误</para>
@@ -29,5 +29,7 @@ namespace RssServer.User.Interfaces
         /// <param name="password"></param>
         /// <returns></returns>
         int ResetPassword(string userId, string oldPwd, string password);
+
+        bool VerifyToken(string userId, string token);
     }
 }
